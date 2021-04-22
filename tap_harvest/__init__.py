@@ -12,11 +12,10 @@ from singer import Transformer, utils
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 REQUIRED_CONFIG_KEYS = [
+    "account_id",
     "start_date",
-    "refresh_token",
-    "client_id",
-    "client_secret",
     "user_agent",
+    "personal_token"
 ]
 
 BASE_API_URL = "https://api.harvestapp.com/v2/"
@@ -27,67 +26,15 @@ AUTH = {}
 
 
 class Auth:
-    def __init__(self, client_id, client_secret, refresh_token):
-        self._client_id = client_id
-        self._client_secret = client_secret
-        self._refresh_token = refresh_token
-        self._account_id = None
-        self._refresh_access_token()
+    def __init__(self, personal_token, account_id):
 
-    @backoff.on_exception(
-        backoff.expo,
-        requests.exceptions.RequestException,
-        max_tries=5,
-        giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500,
-        factor=2)
-    def _make_refresh_token_request(self):
-        return requests.request('POST',
-                                url=BASE_ID_URL + 'oauth2/token',
-                                data={
-                                    'client_id': self._client_id,
-                                    'client_secret': self._client_secret,
-                                    'refresh_token': self._refresh_token,
-                                    'grant_type': 'refresh_token',
-                                },
-                                headers={"User-Agent": CONFIG.get("user_agent")})
-
-    def _refresh_access_token(self):
-        LOGGER.info("Refreshing access token")
-        resp = self._make_refresh_token_request()
-        expires_in_seconds = resp.json().get('expires_in', 17 * 60 * 60)
-        self._expires_at = pendulum.now().add(seconds=expires_in_seconds)
-        resp_json = {}
-        try:
-            resp_json = resp.json()
-            self._access_token = resp_json['access_token']
-        except KeyError as key_err:
-            if resp_json.get('error'):
-                LOGGER.critical(resp_json.get('error'))
-            if resp_json.get('error_description'):
-                LOGGER.critical(resp_json.get('error_description'))
-            raise key_err
-        LOGGER.info("Got refreshed access token")
+        self._personal_token = personal_token
+        self._account_id = account_id
 
     def get_access_token(self):
-        if self._access_token is not None and self._expires_at > pendulum.now():
-            return self._access_token
-
-        self._refresh_access_token()
-        return self._access_token
+        return self._personal_token
 
     def get_account_id(self):
-        if self._account_id is not None:
-            return self._account_id
-
-        response = requests.request('GET',
-                                    url=BASE_ID_URL + 'accounts',
-                                    data={
-                                        'access_token': self._access_token,
-                                    },
-                                    headers={"User-Agent": CONFIG.get("user_agent")})
-
-        self._account_id = str(response.json()['accounts'][0]['id'])
-
         return self._account_id
 
 
@@ -135,7 +82,6 @@ def request(url, params=None):
     resp = SESSION.send(req)
     resp.raise_for_status()
     return resp.json()
-
 
 # Any date-times values can either be a string or a null.
 # If null, parsing the date results in an error.
@@ -420,43 +366,43 @@ def do_sync():
     # Grab all clients and client contacts. Contacts have client FKs so grab
     # them last.
     sync_endpoint("clients")
-    sync_endpoint("contacts", object_to_id=['client'])
-    sync_roles()
+    # sync_endpoint("contacts", object_to_id=['client'])
+    # sync_roles()
 
-    # Sync related project objects
-    sync_endpoint("projects", object_to_id=['client'])
-    sync_endpoint("tasks")
-    sync_endpoint("project_tasks", endpoint='task_assignments', path='task_assignments',
-                  object_to_id=['project', 'task'])
-    sync_endpoint("project_users", endpoint='user_assignments', path='user_assignments',
-                  object_to_id=['project', 'user'])
+    # # Sync related project objects
+    # sync_endpoint("projects", object_to_id=['client'])
+    # sync_endpoint("tasks")
+    # sync_endpoint("project_tasks", endpoint='task_assignments', path='task_assignments',
+    #               object_to_id=['project', 'task'])
+    # sync_endpoint("project_users", endpoint='user_assignments', path='user_assignments',
+    #               object_to_id=['project', 'user'])
 
-    # Sync users
-    sync_users()
+    # # Sync users
+    # sync_users()
 
-    if company['expense_feature']:
-        # Sync expenses and their categories
-        sync_endpoint("expense_categories")
-        sync_expenses()
-    else:
-        LOGGER.info("Expense Feature not enabled, skipping.")
+    # if company['expense_feature']:
+    #     # Sync expenses and their categories
+    #     sync_endpoint("expense_categories")
+    #     sync_expenses()
+    # else:
+    #     LOGGER.info("Expense Feature not enabled, skipping.")
 
-    if company['invoice_feature']:
-        # Sync invoices and all related records
-        sync_endpoint("invoice_item_categories")
-        sync_invoices()
-    else:
-        LOGGER.info("Invoice Feature not enabled, skipping.")
+    # if company['invoice_feature']:
+    #     # Sync invoices and all related records
+    #     sync_endpoint("invoice_item_categories")
+    #     sync_invoices()
+    # else:
+    #     LOGGER.info("Invoice Feature not enabled, skipping.")
 
-    if company['estimate_feature']:
-        # Sync estimates and all related records
-        sync_endpoint("estimate_item_categories")
-        sync_estimates()
-    else:
-        LOGGER.info("Estimate Feature not enabled, skipping.")
+    # if company['estimate_feature']:
+    #     # Sync estimates and all related records
+    #     sync_endpoint("estimate_item_categories")
+    #     sync_estimates()
+    # else:
+    #     LOGGER.info("Estimate Feature not enabled, skipping.")
 
-    # Sync Time Entries along with their external reference objects
-    sync_time_entries()
+    # # Sync Time Entries along with their external reference objects
+    # sync_time_entries()
 
     LOGGER.info("Sync complete")
 
@@ -467,7 +413,7 @@ def main_impl():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     CONFIG.update(args.config)
     global AUTH  # pylint: disable=global-statement
-    AUTH = Auth(CONFIG['client_id'], CONFIG['client_secret'], CONFIG['refresh_token'])
+    AUTH = Auth(CONFIG['personal_token'], CONFIG['account_id'])
     STATE.update(args.state)
     if args.discover:
         do_discover()
