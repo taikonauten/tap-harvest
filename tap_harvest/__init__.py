@@ -366,43 +366,43 @@ def do_sync():
     # Grab all clients and client contacts. Contacts have client FKs so grab
     # them last.
     sync_endpoint("clients")
-    # sync_endpoint("contacts", object_to_id=['client'])
-    # sync_roles()
+    sync_endpoint("contacts", object_to_id=['client'])
+    sync_roles()
 
-    # # Sync related project objects
-    # sync_endpoint("projects", object_to_id=['client'])
-    # sync_endpoint("tasks")
-    # sync_endpoint("project_tasks", endpoint='task_assignments', path='task_assignments',
-    #               object_to_id=['project', 'task'])
-    # sync_endpoint("project_users", endpoint='user_assignments', path='user_assignments',
-    #               object_to_id=['project', 'user'])
+    # Sync related project objects
+    sync_endpoint("projects", object_to_id=['client'])
+    sync_endpoint("tasks")
+    sync_endpoint("project_tasks", endpoint='task_assignments', path='task_assignments',
+                  object_to_id=['project', 'task'])
+    sync_endpoint("project_users", endpoint='user_assignments', path='user_assignments',
+                  object_to_id=['project', 'user'])
 
-    # # Sync users
-    # sync_users()
+    # Sync users
+    sync_users()
 
-    # if company['expense_feature']:
-    #     # Sync expenses and their categories
-    #     sync_endpoint("expense_categories")
-    #     sync_expenses()
-    # else:
-    #     LOGGER.info("Expense Feature not enabled, skipping.")
+    if company['expense_feature']:
+        # Sync expenses and their categories
+        sync_endpoint("expense_categories")
+        sync_expenses()
+    else:
+        LOGGER.info("Expense Feature not enabled, skipping.")
 
-    # if company['invoice_feature']:
-    #     # Sync invoices and all related records
-    #     sync_endpoint("invoice_item_categories")
-    #     sync_invoices()
-    # else:
-    #     LOGGER.info("Invoice Feature not enabled, skipping.")
+    if company['invoice_feature']:
+        # Sync invoices and all related records
+        sync_endpoint("invoice_item_categories")
+        sync_invoices()
+    else:
+        LOGGER.info("Invoice Feature not enabled, skipping.")
 
-    # if company['estimate_feature']:
-    #     # Sync estimates and all related records
-    #     sync_endpoint("estimate_item_categories")
-    #     sync_estimates()
-    # else:
-    #     LOGGER.info("Estimate Feature not enabled, skipping.")
+    if company['estimate_feature']:
+        # Sync estimates and all related records
+        sync_endpoint("estimate_item_categories")
+        sync_estimates()
+    else:
+        LOGGER.info("Estimate Feature not enabled, skipping.")
 
-    # # Sync Time Entries along with their external reference objects
-    # sync_time_entries()
+    # Sync Time Entries along with their external reference objects
+    sync_time_entries()
 
     LOGGER.info("Sync complete")
 
