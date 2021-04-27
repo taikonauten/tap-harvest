@@ -169,11 +169,14 @@ def sync_endpoint(schema_name, endpoint=None, path=None, date_fields=None, with_
 
 
 def sync_time_entries():
+    external_reference_schema = load_and_write_schema("external_reference")
+    load_and_write_schema("time_entry_external_reference",
+                              key_properties=["time_entry_id", "external_reference_id"])
     def for_each_time_entry(time_entry, time_extracted):
         # Extract external_reference
-        external_reference_schema = load_and_write_schema("external_reference")
-        load_and_write_schema("time_entry_external_reference",
-                              key_properties=["time_entry_id", "external_reference_id"])
+        # external_reference_schema = load_and_write_schema("external_reference")
+        # load_and_write_schema("time_entry_external_reference",
+        #                       key_properties=["time_entry_id", "external_reference_id"])
         if time_entry['external_reference'] is not None:
             with Transformer() as transformer:
                 external_reference = time_entry['external_reference']
@@ -285,9 +288,10 @@ def sync_estimates():
 
 
 def sync_roles():
+    load_and_write_schema("user_roles", key_properties=["user_id", "role_id"])
     def for_each_role(role, time_extracted):
         # Extract user_roles
-        load_and_write_schema("user_roles", key_properties=["user_id", "role_id"])
+        # load_and_write_schema("user_roles", key_properties=["user_id", "role_id"])
         for user_id in role['user_ids']:
             pivot_row = {
                 'role_id': role['id'],
@@ -302,6 +306,7 @@ def sync_roles():
 
 
 def sync_users():
+    load_and_write_schema("user_project_tasks", key_properties=["user_id", "project_task_id"])
     def for_each_user(user, time_extracted): #pylint: disable=unused-argument
         def map_user_projects(project_assignment):
             project_assignment['user'] = user
@@ -309,8 +314,8 @@ def sync_users():
 
         def for_each_user_project(user_project_assignment, time_extracted):
             # Extract user_project_tasks
-            load_and_write_schema("user_project_tasks",
-                                  key_properties=["user_id", "project_task_id"])
+            # load_and_write_schema("user_project_tasks",
+            #                       key_properties=["user_id", "project_task_id"])
             for project_task in user_project_assignment['task_assignments']:
                 pivot_row = {
                     'user_id': user['id'],
